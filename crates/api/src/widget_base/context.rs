@@ -472,7 +472,7 @@ impl<'a> Context<'a> {
     }
 
     /// Creates a new message reader iterator for the given message type and the current entity.
-    pub fn message_reader<M: Any + Send>(&self) -> MessageReader<M> {
+    pub fn messages<M: Any + Send>(&self) -> MessageReader<M> {
         self.provider.message_adapter.message_reader(self.entity)
     }
 

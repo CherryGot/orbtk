@@ -524,7 +524,7 @@ impl State for NavigationState {
     }
 
     fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
-        for message in ctx.message_reader::<NavigationAction>() {
+        for message in ctx.messages::<NavigationAction>() {
             match message {
                 NavigationAction::ShowMaster => MasterDetail::show_master(ctx, self.master_detail),
                 NavigationAction::ShowDetail => MasterDetail::show_detail(ctx, self.master_detail),
