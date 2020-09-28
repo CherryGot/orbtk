@@ -255,7 +255,7 @@ impl Template for MasterDetail {
             // used to force an update on the next iteration after post layout
             .on_activate(move |states, _| states.get_mut::<MasterDetailState>(id).update = true)
             .on_show_master(move |states, _| states.get_mut::<MasterDetailState>(id).show_master())
-            .on_show_detail(move |states, _| states.get_mut::<MasterDetailState>(id).show_detail())
+            .on_show_detail(move |ctx, _| ctx.send_message(MasterDetailAction::ShowDetail, id))
     }
 }
 

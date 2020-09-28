@@ -1,5 +1,6 @@
 use std::{
     any::{Any, TypeId},
+    marker::PhantomData,
     sync::{Arc, Mutex},
 };
 
@@ -84,7 +85,7 @@ impl MessageAdapter {
             .is_empty()
     }
 
-    pub fn message_reader(&self, target: Entity) -> MessageReader {
+    pub fn message_reader<M: Any + Send>(&self, target: Entity) -> MessageReader<M> {
         MessageReader::new(self.messages.clone(), target)
     }
 
@@ -93,19 +94,34 @@ impl MessageAdapter {
     }
 }
 
-pub struct MessageReader {
+#[derive(Debug)]
+pub struct MessageReader<M>
+where
+    M: Any + Send,
+{
     messages: Arc<Mutex<Vec<MessageBox>>>,
     target: Entity,
+    _phatom: PhantomData<M>,
 }
 
-impl MessageReader {
+impl<M> MessageReader<M>
+where
+    M: Any + Send,
+{
     pub(crate) fn new(messages: Arc<Mutex<Vec<MessageBox>>>, target: Entity) -> Self {
-        MessageReader { messages, target }
+        MessageReader {
+            messages,
+            target,
+            _phatom: PhantomData::default(),
+        }
     }
 }
 
-impl Iterator for MessageReader {
-    type Item = MessageBox;
+impl<M> Iterator for MessageReader<M>
+where
+    M: Any + Send,
+{
+    type Item = M;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(index) = self
@@ -113,13 +129,15 @@ impl Iterator for MessageReader {
             .lock()
             .expect("MessageReader::next: Cannot lock message queue.")
             .iter()
-            .position(|m| m.target == self.target)
+            .position(|m| m.target == self.target && m.type_id() == TypeId::of::<M>())
         {
             return Some(
                 self.messages
                     .lock()
                     .expect("MessageReader::next: Cannot lock message queue.")
-                    .remove(index),
+                    .remove(index)
+                    .downcast::<M>()
+                    .unwrap(),
             );
         }
 

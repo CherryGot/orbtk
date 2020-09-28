@@ -72,6 +72,7 @@ impl EventStateSystem {
                         &mut StatesContext::new(
                             &mut *self.context_provider.states.borrow_mut(),
                             ecm,
+                            self.context_provider.message_adapter.message_sender(),
                         ),
                         &event,
                     )
@@ -323,6 +324,7 @@ impl EventStateSystem {
                         &mut StatesContext::new(
                             &mut *self.context_provider.states.borrow_mut(),
                             ecm,
+                            self.context_provider.message_adapter.message_sender(),
                         ),
                         event,
                     )

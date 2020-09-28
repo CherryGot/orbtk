@@ -1,26 +1,20 @@
-use std::collections::BTreeMap;
+use std::{any::Any, collections::BTreeMap};
 
 use dces::prelude::{Component, Entity, EntityComponentManager, StringComponentStore};
 
-use crate::tree::Tree;
+use crate::{tree::Tree, widget_base::MessageSender};
 
 use super::State;
 
 /// The `StatesContext` provides access to the widget states.
+#[derive(Constructor)]
 pub struct StatesContext<'a> {
     states: &'a mut BTreeMap<Entity, Box<dyn State>>,
     ecm: &'a mut EntityComponentManager<Tree, StringComponentStore>,
+    message_sender: MessageSender,
 }
 
 impl<'a> StatesContext<'a> {
-    /// Creates a new state context.
-    pub fn new(
-        states: &'a mut BTreeMap<Entity, Box<dyn State>>,
-        ecm: &'a mut EntityComponentManager<Tree, StringComponentStore>,
-    ) -> Self {
-        StatesContext { states, ecm }
-    }
-
     // Mark the widget as dirty.
     fn mark_as_dirty(&mut self, entity: Entity) {
         *self
@@ -113,5 +107,10 @@ impl<'a> StatesContext<'a> {
         }
 
         None
+    }
+
+    /// Sends a message to the given target entity (widget).
+    pub fn send_message<M: Any + Send>(&self, message: M, target: Entity) {
+        self.message_sender.send(message, target);
     }
 }

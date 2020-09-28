@@ -462,8 +462,8 @@ impl Template for NavigationView {
                                         .visibility(("md_navigation_visibility", id))
                                         .h_align("start")
                                         .text("show details")
-                                        .on_click(move |states, _| {
-                                            states.get_mut::<NavigationState>(id).show_detail();
+                                        .on_click(move |ctx, _| {
+                                            ctx.send_message(NavigationAction::ShowDetail, id);
                                             true
                                         })
                                         .build(ctx),
@@ -486,8 +486,8 @@ impl Template for NavigationView {
                                         .style("button_single_content")
                                         .visibility(("md_navigation_visibility", id))
                                         .h_align("start")
-                                        .on_click(move |states, _| {
-                                            states.get_mut::<NavigationState>(id).show_master();
+                                        .on_click(move |ctx, _| {
+                                            ctx.send_message(NavigationAction::ShowMaster, id);
                                             true
                                         })
                                         .build(ctx),
@@ -516,17 +516,6 @@ enum NavigationAction {
 #[derive(Debug, Default, AsAny)]
 struct NavigationState {
     master_detail: Entity,
-    action: Option<NavigationAction>,
-}
-
-impl NavigationState {
-    fn show_master(&mut self) {
-        self.action = Some(NavigationAction::ShowMaster);
-    }
-
-    fn show_detail(&mut self) {
-        self.action = Some(NavigationAction::ShowDetail);
-    }
 }
 
 impl State for NavigationState {
@@ -535,13 +524,11 @@ impl State for NavigationState {
     }
 
     fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
-        if let Some(action) = self.action {
-            match action {
+        for message in ctx.message_reader::<NavigationAction>() {
+            match message {
                 NavigationAction::ShowMaster => MasterDetail::show_master(ctx, self.master_detail),
                 NavigationAction::ShowDetail => MasterDetail::show_detail(ctx, self.master_detail),
             }
-
-            self.action = None;
         }
     }
 }

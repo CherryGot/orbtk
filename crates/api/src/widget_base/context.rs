@@ -471,8 +471,8 @@ impl<'a> Context<'a> {
         self.provider.event_adapter.clone()
     }
 
-    /// Creates a new message reader. The reader can only read message that are determined for the entity of the context on creation of the message reader.
-    pub fn message_reader(&self) -> MessageReader {
+    /// Creates a new message reader iterator for the given message type and the current entity.
+    pub fn message_reader<M: Any + Send>(&self) -> MessageReader<M> {
         self.provider.message_adapter.message_reader(self.entity)
     }
 
