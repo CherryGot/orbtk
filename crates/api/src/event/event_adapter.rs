@@ -12,7 +12,7 @@ use crate::event::*;
 /// impl State for MayState {
 ///     fn update(&mut self, _: &mut Registry, ctx: &mut Context) {
 ///         let event_adapter = ctx.event_adapter();
-///         let entity = ctx.entity;
+///         let entity = ctx.entity();
 ///         
 ///         let _ = std::thread::spawn(move|| {
 ///             loop {
@@ -68,25 +68,26 @@ impl EventAdapter {
     }
 
     /// Returns an dequeue iterator, that dequeue events from the event queue.
-    pub(crate) fn dequeue(&self) -> DequeueIterator {
-        DequeueIterator {
+    pub(crate) fn dequeue(&self) -> EventDequeueIterator {
+        EventDequeueIterator {
             event_adapter: self.clone(),
         }
     }
 }
 
-pub struct DequeueIterator {
+/// Dequeue iterator through a list of events.
+pub struct EventDequeueIterator {
     event_adapter: EventAdapter,
 }
 
-impl Iterator for DequeueIterator {
+impl Iterator for EventDequeueIterator {
     type Item = EventBox;
 
-    fn next(&mut self) -> Option<EventBox> {
+    fn next(&mut self) -> Option<Self::Item> {
         self.event_adapter
             .event_queue
             .lock()
-            .expect("DequeueIterator::next: Cannot lock event queue.")
+            .expect("EventDequeueIterator::next: Cannot lock event queue.")
             .dequeue()
     }
 }

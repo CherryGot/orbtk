@@ -1,4 +1,4 @@
-use super::{Context, Registry};
+use super::{Context, MessageBox, Registry};
 use std::any::Any;
 
 pub trait AsAny: Any {
@@ -83,4 +83,12 @@ pub trait State: AsAny {
     ///
     /// [`event`]: ../trait.Event.html
     fn update_post_layout(&mut self, _registry: &mut Registry, _ctx: &mut Context) {}
+
+    /// Handles the given message. Messages can be send from other widgets or thread and can be handled by a state.
+    ///
+    /// # Arguments
+    /// * `_registry`: Provides access to the global Service Registry.
+    /// * `_ctx`: Represents the context of the current widget.Allows manipulation of the widget tree.
+    /// * `_message`: Message that is sent to the widget of the state.
+    fn message(&mut self, _registry: &mut Registry, _ctx: &mut Context, _message: MessageBox) {}
 }

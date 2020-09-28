@@ -477,9 +477,9 @@ impl System<Tree, StringComponentStore, RenderContext2D> for EventStateSystem {
                 dirty_index += 1;
             }
 
-            // crate::shell::CONSOLE.time_end("update-time:");
-
-            if self.context_provider.event_adapter.is_empty() {
+            if self.context_provider.event_adapter.is_empty()
+                && self.context_provider.message_adapter.is_empty()
+            {
                 break;
             }
         }

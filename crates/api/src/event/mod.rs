@@ -41,7 +41,7 @@ pub enum EventStrategy {
 }
 
 /// Used to define an event.
-pub trait Event: Any {
+pub trait Event: Any + Send {
     fn strategy(&self) -> EventStrategy {
         EventStrategy::BottomUp
     }

@@ -18,7 +18,7 @@ use super::WidgetContainer;
 /// The `Context` is provides access for the states to objects they could work with.
 pub struct Context<'a> {
     pub(crate) ecm: &'a mut EntityComponentManager<Tree, StringComponentStore>,
-    pub entity: Entity,
+    entity: Entity,
     pub theme: Theme,
     pub(crate) provider: &'a ContextProvider,
     new_states: BTreeMap<Entity, Box<dyn State>>,
@@ -55,6 +55,11 @@ impl<'a> Context<'a> {
             remove_widget_list: vec![],
             render_context,
         }
+    }
+
+    /// Returns the current widget entity.
+    pub fn entity(&self) -> Entity {
+        self.entity
     }
 
     /// Access the raw window handle. Could be `None` on unsupported raw-window-handle platforms like `Redox`.
@@ -461,9 +466,19 @@ impl<'a> Context<'a> {
         key
     }
 
-    /// Returns a cloned event adapter.
+    /// Returns a cloned thread save event adapter.
     pub fn event_adapter(&self) -> EventAdapter {
         self.provider.event_adapter.clone()
+    }
+
+    /// Creates a new message reader. The reader can only read message that are determined for the entity of the context on creation of the message reader.
+    pub fn message_reader(&self) -> MessageReader {
+        self.provider.message_adapter.message_reader(self.entity)
+    }
+
+    /// Creates a new thread save message sender.
+    pub fn message_sender(&self) -> MessageSender {
+        self.provider.message_adapter.message_sender()
     }
 
     /// Gets a new sender that allows to communicate with the window shell.
