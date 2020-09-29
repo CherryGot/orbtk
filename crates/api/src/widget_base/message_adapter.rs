@@ -2,7 +2,7 @@ use std::{
     any::{Any, TypeId},
     collections::BTreeMap,
     marker::PhantomData,
-    sync::{Arc, Mutex},
+    sync::{Arc, RwLock},
 };
 
 use dces::entity::Entity;
@@ -55,7 +55,7 @@ impl MessageBox {
 
 #[derive(Clone, Default, Debug)]
 pub struct MessageAdapter {
-    messages: Arc<Mutex<BTreeMap<Entity, Vec<MessageBox>>>>,
+    messages: Arc<RwLock<BTreeMap<Entity, Vec<MessageBox>>>>,
 }
 
 impl MessageAdapter {
@@ -63,22 +63,22 @@ impl MessageAdapter {
         MessageAdapter::default()
     }
 
+    pub fn entities(&self) -> Vec<Entity> {
+        self.messages.read().unwrap().keys().cloned().collect()
+    }
+
+    pub fn clear_messages(&self, entity: Entity) {
+        let _ = self.messages.write().unwrap().remove(&entity);
+    }
+
     pub fn push_message<M: Any + Send>(&self, target: Entity, message: M) {
-        if !self
-            .messages
-            .lock()
-            .expect("MessageAdapter::push_message: Cannot lock message queue.")
-            .contains_key(&target)
-        {
-            self.messages
-                .lock()
-                .expect("MessageAdapter::push_message: Cannot lock message queue.")
-                .insert(target, vec![]);
+        if !self.messages.read().unwrap().contains_key(&target) {
+            self.messages.write().unwrap().insert(target, vec![]);
         }
 
         self.messages
-            .lock()
-            .expect("MessageAdapter::push_message: Cannot lock message queue.")
+            .write()
+            .unwrap()
             .get_mut(&target)
             .unwrap()
             .push(MessageBox::new(message, target));
@@ -86,27 +86,16 @@ impl MessageAdapter {
 
     /// Returns the number of messages in the queue.
     pub fn len(&self) -> usize {
-        self.messages
-            .lock()
-            .expect("EventAdapter::len: Cannot lock message queue.")
-            .len()
+        self.messages.read().unwrap().len()
     }
 
     /// Returns `true` if the event message contains no events.
     pub fn is_empty(&self) -> bool {
-        self.messages
-            .lock()
-            .expect("EventAdapter::is_empty: Cannot lock message queue.")
-            .is_empty()
+        self.messages.read().unwrap().is_empty()
     }
 
     pub fn message_reader<M: Any + Send>(&self, target: Entity) -> MessageReader<M> {
-        if let Some(messages) = self
-            .messages
-            .lock()
-            .expect("EventAdapter::message_reader: Cannot lock message queue.")
-            .remove(&target)
-        {
+        if let Some(messages) = self.messages.write().unwrap().remove(&target) {
             return MessageReader::new(messages, target);
         }
 

@@ -350,7 +350,7 @@ impl System<Tree, StringComponentStore, RenderContext2D> for EventStateSystem {
     ) {
         let mut update = false;
 
-        loop {
+        'main: loop {
             {
                 let mouse_position = self.context_provider.mouse_position.get();
                 for event in self.context_provider.event_adapter.dequeue() {
@@ -395,94 +395,78 @@ impl System<Tree, StringComponentStore, RenderContext2D> for EventStateSystem {
 
             let mut remove_widget_list: Vec<Entity> = vec![];
 
-            let mut dirty_index = 0;
-
             loop {
-                if dirty_index
-                    >= ecm
-                        .component_store()
-                        .get::<Vec<Entity>>("dirty_widgets", root)
-                        .unwrap()
-                        .len()
+                if self.context_provider.message_adapter.is_empty()
+                    && self.context_provider.event_adapter.is_empty()
                 {
-                    break;
+                    break 'main;
                 }
 
                 let mut skip = false;
 
-                let widget = *ecm
-                    .component_store()
-                    .get::<Vec<Entity>>("dirty_widgets", root)
-                    .unwrap()
-                    .get(dirty_index)
-                    .unwrap();
+                for widget in self.context_provider.message_adapter.entities() {
+                    if !self.context_provider.states.borrow().contains_key(&widget) {
+                        skip = true;
+                    }
 
-                if !self.context_provider.states.borrow().contains_key(&widget) {
-                    skip = true;
-                }
+                    let mut keys = vec![];
 
-                let mut keys = vec![];
-
-                if !skip {
-                    {
-                        let registry = &mut self.registry.borrow_mut();
-
-                        let mut ctx = Context::new(
-                            (widget, ecm),
-                            &theme,
-                            &self.context_provider,
-                            render_context,
-                        );
-
-                        if let Some(state) =
-                            self.context_provider.states.borrow_mut().get_mut(&widget)
+                    if !skip {
                         {
-                            state.update(registry, &mut ctx);
-                        }
+                            let registry = &mut self.registry.borrow_mut();
 
-                        keys.append(&mut ctx.new_states_keys());
-
-                        remove_widget_list.append(ctx.remove_widget_list());
-                        drop(ctx);
-
-                        for key in keys {
                             let mut ctx = Context::new(
-                                (key, ecm),
+                                (widget, ecm),
                                 &theme,
                                 &self.context_provider,
                                 render_context,
                             );
+
                             if let Some(state) =
-                                self.context_provider.states.borrow_mut().get_mut(&key)
+                                self.context_provider.states.borrow_mut().get_mut(&widget)
                             {
-                                state.init(registry, &mut ctx);
+                                state.update(registry, &mut ctx);
                             }
 
+                            keys.append(&mut ctx.new_states_keys());
+
+                            remove_widget_list.append(ctx.remove_widget_list());
                             drop(ctx);
+
+                            for key in keys {
+                                let mut ctx = Context::new(
+                                    (key, ecm),
+                                    &theme,
+                                    &self.context_provider,
+                                    render_context,
+                                );
+                                if let Some(state) =
+                                    self.context_provider.states.borrow_mut().get_mut(&key)
+                                {
+                                    state.init(registry, &mut ctx);
+                                }
+
+                                drop(ctx);
+                            }
+                        }
+
+                        while let Some(remove_widget) = remove_widget_list.pop() {
+                            let mut children = vec![];
+                            get_all_children(&mut children, remove_widget, ecm.entity_store());
+
+                            // remove children of target widget.
+                            for entity in children.iter().rev() {
+                                self.remove_widget(*entity, &theme, ecm, render_context);
+                            }
+
+                            // remove target widget
+                            self.remove_widget(remove_widget, &theme, ecm, render_context);
                         }
                     }
 
-                    while let Some(remove_widget) = remove_widget_list.pop() {
-                        let mut children = vec![];
-                        get_all_children(&mut children, remove_widget, ecm.entity_store());
-
-                        // remove children of target widget.
-                        for entity in children.iter().rev() {
-                            self.remove_widget(*entity, &theme, ecm, render_context);
-                        }
-
-                        // remove target widget
-                        self.remove_widget(remove_widget, &theme, ecm, render_context);
-                    }
+                    // remove all not handled messages to not run loop forever
+                    self.context_provider.message_adapter.clear_messages(widget);
                 }
-
-                dirty_index += 1;
-            }
-
-            if self.context_provider.event_adapter.is_empty()
-                && self.context_provider.message_adapter.is_empty()
-            {
-                break;
             }
         }
     }
