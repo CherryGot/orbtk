@@ -16,9 +16,9 @@ Once the template function is called, they are no more used.
 #[derive(Default, AsAny)]
 pub struct TabHeaderState {
     //Callback called when user click on the header of the tab (normally used to switch to the clicked tab). Only used during initialization
-    on_header_mouse_down_callback: Option<Box<dyn 'static + Fn(&mut StatesContext, Mouse) -> bool>>,
+    on_header_mouse_down_callback: Option<Box<dyn 'static + Fn(MessageSender, Mouse) -> bool>>,
     //Callback called when user click on the close button near the tab header (normally used to close the tab). Only used during initialization
-    on_close_click_callback: Option<Box<dyn 'static + Fn(&mut StatesContext, Point) -> bool>>,
+    on_close_click_callback: Option<Box<dyn 'static + Fn(MessageSender, Point) -> bool>>,
 
     header_bar: Entity,
 
@@ -117,7 +117,7 @@ widget!(
 
 impl TabHeader {
     ///Set the callback that is called when user click on the header (generally used to switch tab)
-    pub fn on_header_mouse_down<T: 'static + Fn(&mut StatesContext, Mouse) -> bool>(
+    pub fn on_header_mouse_down<T: 'static + Fn(MessageSender, Mouse) -> bool>(
         mut self,
         callback: T,
     ) -> Self {
@@ -126,7 +126,7 @@ impl TabHeader {
     }
 
     ///Set the callback that is called when user click on the close button near the header (generally used to close the tab)
-    pub fn on_close_click<T: 'static + Fn(&mut StatesContext, Point) -> bool>(
+    pub fn on_close_click<T: 'static + Fn(MessageSender, Point) -> bool>(
         mut self,
         callback: T,
     ) -> Self {

@@ -11,7 +11,7 @@ pub enum WindowEvent {
     None,
 }
 
-pub type WindowHandlerFn = dyn Fn(&mut StatesContext, WindowEvent) -> bool + 'static;
+pub type WindowHandlerFn = dyn Fn(MessageSender, WindowEvent) -> bool + 'static;
 
 #[derive(IntoHandler)]
 pub struct WindowEventHandler {
@@ -19,7 +19,7 @@ pub struct WindowEventHandler {
 }
 
 impl EventHandler for WindowEventHandler {
-    fn handle_event(&self, states: &mut StatesContext, event: &EventBox) -> bool {
+    fn handle_event(&self, states: MessageSender, event: &EventBox) -> bool {
         if let Ok(event) = event.downcast_ref::<WindowEvent>() {
             return (self.handler)(states, event.clone());
         }

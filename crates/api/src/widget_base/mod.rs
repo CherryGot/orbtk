@@ -75,7 +75,7 @@ pub trait Widget: Template {
     fn insert_handler(self, handler: impl Into<Rc<dyn EventHandler>>) -> Self;
 
     // Inserts a new changed handler.
-    fn insert_changed_handler<H: Fn(&mut StatesContext, Entity) + 'static>(
+    fn insert_changed_handler<H: Fn(MessageSender, Entity) + 'static>(
         self,
         key: impl Into<String>,
         handler: Rc<H>,

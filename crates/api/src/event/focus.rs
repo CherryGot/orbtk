@@ -3,6 +3,7 @@ use dces::prelude::Entity;
 use crate::{
     prelude::*,
     proc_macros::{Event, IntoHandler},
+    widget_base::MessageSender,
 };
 
 /// Used to request keyboard focus on the window.
@@ -12,7 +13,7 @@ pub enum FocusEvent {
     RemoveFocus(Entity),
 }
 
-pub type FocusHandlerFn = dyn Fn(&mut StatesContext, FocusEvent) -> bool + 'static;
+pub type FocusHandlerFn = dyn Fn(MessageSender, FocusEvent) -> bool + 'static;
 
 #[derive(IntoHandler)]
 pub struct FocusEventHandler {
@@ -20,7 +21,7 @@ pub struct FocusEventHandler {
 }
 
 impl EventHandler for FocusEventHandler {
-    fn handle_event(&self, states: &mut StatesContext, event: &EventBox) -> bool {
+    fn handle_event(&self, states: MessageSender, event: &EventBox) -> bool {
         if let Ok(event) = event.downcast_ref::<FocusEvent>() {
             return (self.handler)(states, event.clone());
         }

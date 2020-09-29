@@ -4,7 +4,7 @@ use std::{any::Any, collections::BTreeMap, rc::Rc};
 
 use dces::entity::Entity;
 
-use crate::widget_base::StatesContext;
+use crate::widget_base::MessageSender;
 
 pub use self::drop::*;
 pub use self::editable::*;
@@ -49,4 +49,4 @@ pub trait Event: Any + Send {
 
 pub type EventHandlerMap = BTreeMap<Entity, Vec<Rc<dyn EventHandler>>>;
 
-pub type TriggerHandler = dyn Fn(&mut StatesContext, Entity) + 'static;
+pub type TriggerHandler = dyn Fn(MessageSender, Entity) + 'static;

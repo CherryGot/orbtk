@@ -417,7 +417,7 @@ macro_rules! widget {
                 self
             }
 
-            fn insert_changed_handler<H: Fn(&mut StatesContext, Entity) + 'static>(mut self, key: impl Into<String>, handler: Rc<H>) -> Self {
+            fn insert_changed_handler<H: Fn(MessageSender, Entity) + 'static>(mut self, key: impl Into<String>, handler: Rc<H>) -> Self {
                 let key = key.into();
                 if let Filter::List(filter) = &mut self.on_changed_filter {
                     filter.push(key.clone());
@@ -559,7 +559,7 @@ macro_rules! trigger_event {
         pub struct $event_handler(Rc<TriggerHandler>);
 
         impl EventHandler for $event_handler {
-            fn handle_event(&self, states: &mut StatesContext, event: &EventBox) -> bool {
+            fn handle_event(&self, states: MessageSender, event: &EventBox) -> bool {
                 if let Ok(event) = event.downcast_ref::<$event>() {
                     (self.0)(states, event.0);
                 }
@@ -579,7 +579,7 @@ macro_rules! trigger_event {
         }
 
         pub trait $trait: Sized + Widget {
-            fn $method<H: Fn(&mut StatesContext, Entity) + 'static>(self, handler: H) -> Self {
+            fn $method<H: Fn(MessageSender, Entity) + 'static>(self, handler: H) -> Self {
                 self.insert_handler($event_handler(Rc::new(handler)))
             }
         }

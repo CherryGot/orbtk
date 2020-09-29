@@ -18,7 +18,7 @@ pub struct KeyUpEvent {
     pub event: KeyEvent,
 }
 
-pub type KeyHandler = dyn Fn(&mut StatesContext, KeyEvent) -> bool + 'static;
+pub type KeyHandler = dyn Fn(MessageSender, KeyEvent) -> bool + 'static;
 
 /// Used to handle key down events. Could be attached to a widget.
 #[derive(IntoHandler)]
@@ -27,7 +27,7 @@ pub struct KeyDownEventHandler {
 }
 
 impl EventHandler for KeyDownEventHandler {
-    fn handle_event(&self, state_context: &mut StatesContext, event: &EventBox) -> bool {
+    fn handle_event(&self, state_context: MessageSender, event: &EventBox) -> bool {
         event
             .downcast_ref::<KeyDownEvent>()
             .ok()
@@ -43,10 +43,7 @@ impl EventHandler for KeyDownEventHandler {
 
 pub trait KeyDownHandler: Sized + Widget {
     /// Inserts a handler.
-    fn on_key_down<H: Fn(&mut StatesContext, KeyEvent) -> bool + 'static>(
-        self,
-        handler: H,
-    ) -> Self {
+    fn on_key_down<H: Fn(MessageSender, KeyEvent) -> bool + 'static>(self, handler: H) -> Self {
         self.insert_handler(KeyDownEventHandler {
             handler: Rc::new(handler),
         })

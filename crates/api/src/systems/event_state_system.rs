@@ -69,11 +69,7 @@ impl EventStateSystem {
             {
                 handlers.iter().any(|handler| {
                     handler.handle_event(
-                        &mut StatesContext::new(
-                            &mut *self.context_provider.states.borrow_mut(),
-                            ecm,
-                            self.context_provider.message_adapter.message_sender(),
-                        ),
+                        self.context_provider.message_adapter.message_sender(),
                         &event,
                     )
                 });
@@ -321,11 +317,7 @@ impl EventStateSystem {
             if let Some(handlers) = self.context_provider.handler_map.borrow().get(node) {
                 handled = handlers.iter().any(|handler| {
                     handler.handle_event(
-                        &mut StatesContext::new(
-                            &mut *self.context_provider.states.borrow_mut(),
-                            ecm,
-                            self.context_provider.message_adapter.message_sender(),
-                        ),
+                        self.context_provider.message_adapter.message_sender(),
                         event,
                     )
                 });

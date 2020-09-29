@@ -150,7 +150,7 @@ widget!(
 );
 
 impl Window {
-    fn on_window_event<H: Fn(&mut StatesContext, WindowEvent) -> bool + 'static>(
+    fn on_window_event<H: Fn(MessageSender, WindowEvent) -> bool + 'static>(
         self,
         handler: H,
     ) -> Self {
@@ -159,7 +159,7 @@ impl Window {
         })
     }
 
-    fn on_focus_event<H: Fn(&mut StatesContext, FocusEvent) -> bool + 'static>(
+    fn on_focus_event<H: Fn(MessageSender, FocusEvent) -> bool + 'static>(
         self,
         handler: H,
     ) -> Self {

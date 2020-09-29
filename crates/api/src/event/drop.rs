@@ -1,6 +1,7 @@
 use crate::{
     prelude::*,
     proc_macros::{Event, IntoHandler},
+    widget_base::MessageSender,
 };
 
 /// This event occurs on a drop file event on the window.
@@ -17,7 +18,7 @@ pub struct DropTextEvent {
     pub position: Point,
 }
 
-pub type DropFn = dyn Fn(&mut StatesContext, String, Point) -> bool + 'static;
+pub type DropFn = dyn Fn(MessageSender, String, Point) -> bool + 'static;
 
 #[derive(IntoHandler)]
 pub struct DropFileHandler {
@@ -25,7 +26,7 @@ pub struct DropFileHandler {
 }
 
 impl EventHandler for DropFileHandler {
-    fn handle_event(&self, states: &mut StatesContext, event: &EventBox) -> bool {
+    fn handle_event(&self, states: MessageSender, event: &EventBox) -> bool {
         if let Ok(event) = event.downcast_ref::<DropFileEvent>() {
             return (self.handler)(states, event.file_name.clone(), event.position);
         }
@@ -44,7 +45,7 @@ pub struct DropTextHandler {
 }
 
 impl EventHandler for DropTextHandler {
-    fn handle_event(&self, states: &mut StatesContext, event: &EventBox) -> bool {
+    fn handle_event(&self, states: MessageSender, event: &EventBox) -> bool {
         if let Ok(event) = event.downcast_ref::<DropTextEvent>() {
             return (self.handler)(states, event.text.clone(), event.position);
         }
@@ -60,7 +61,7 @@ impl EventHandler for DropTextHandler {
 /// Implement this trait if you want that your widget can handle drop (file | text) events
 pub trait DropHandler: Sized + Widget {
     /// Inserts a handler for drop file events.
-    fn on_drop_file<H: Fn(&mut StatesContext, String, Point) -> bool + 'static>(
+    fn on_drop_file<H: Fn(MessageSender, String, Point) -> bool + 'static>(
         self,
         handler: H,
     ) -> Self {
@@ -70,7 +71,7 @@ pub trait DropHandler: Sized + Widget {
     }
 
     /// Inserts a handler for drop text events.
-    fn on_drop_text<H: Fn(&mut StatesContext, String, Point) -> bool + 'static>(
+    fn on_drop_text<H: Fn(MessageSender, String, Point) -> bool + 'static>(
         self,
         handler: H,
     ) -> Self {
