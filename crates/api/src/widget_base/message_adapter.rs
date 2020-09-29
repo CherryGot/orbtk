@@ -1,5 +1,6 @@
 use std::{
     any::{Any, TypeId},
+    collections::BTreeMap,
     marker::PhantomData,
     sync::{Arc, Mutex},
 };
@@ -54,7 +55,7 @@ impl MessageBox {
 
 #[derive(Clone, Default, Debug)]
 pub struct MessageAdapter {
-    messages: Arc<Mutex<Vec<MessageBox>>>,
+    messages: Arc<Mutex<BTreeMap<Entity, Vec<MessageBox>>>>,
 }
 
 impl MessageAdapter {
@@ -63,9 +64,23 @@ impl MessageAdapter {
     }
 
     pub fn push_message<M: Any + Send>(&self, target: Entity, message: M) {
+        if !self
+            .messages
+            .lock()
+            .expect("MessageAdapter::push_message: Cannot lock message queue.")
+            .contains_key(&target)
+        {
+            self.messages
+                .lock()
+                .expect("MessageAdapter::push_message: Cannot lock message queue.")
+                .insert(target, vec![]);
+        }
+
         self.messages
             .lock()
             .expect("MessageAdapter::push_message: Cannot lock message queue.")
+            .get_mut(&target)
+            .unwrap()
             .push(MessageBox::new(message, target));
     }
 
@@ -86,11 +101,20 @@ impl MessageAdapter {
     }
 
     pub fn message_reader<M: Any + Send>(&self, target: Entity) -> MessageReader<M> {
-        MessageReader::new(self.messages.clone(), target)
+        if let Some(messages) = self
+            .messages
+            .lock()
+            .expect("EventAdapter::message_reader: Cannot lock message queue.")
+            .remove(&target)
+        {
+            return MessageReader::new(messages, target);
+        }
+
+        MessageReader::new(vec![], target)
     }
 
     pub fn message_sender(&self) -> MessageSender {
-        MessageSender::new(self.messages.clone())
+        MessageSender::new(self.clone())
     }
 }
 
@@ -99,7 +123,7 @@ pub struct MessageReader<M>
 where
     M: Any + Send,
 {
-    messages: Arc<Mutex<Vec<MessageBox>>>,
+    messages: Vec<MessageBox>,
     target: Entity,
     _phatom: PhantomData<M>,
 }
@@ -108,7 +132,7 @@ impl<M> MessageReader<M>
 where
     M: Any + Send,
 {
-    pub(crate) fn new(messages: Arc<Mutex<Vec<MessageBox>>>, target: Entity) -> Self {
+    pub(crate) fn new(messages: Vec<MessageBox>, target: Entity) -> Self {
         MessageReader {
             messages,
             target,
@@ -126,19 +150,10 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(index) = self
             .messages
-            .lock()
-            .expect("MessageReader::next: Cannot lock message queue.")
             .iter()
             .position(|m| m.target == self.target && m.type_id() == TypeId::of::<M>())
         {
-            return Some(
-                self.messages
-                    .lock()
-                    .expect("MessageReader::next: Cannot lock message queue.")
-                    .remove(index)
-                    .downcast::<M>()
-                    .unwrap(),
-            );
+            return Some(self.messages.remove(index).downcast::<M>().unwrap());
         }
 
         None
@@ -146,18 +161,15 @@ where
 }
 
 pub struct MessageSender {
-    messages: Arc<Mutex<Vec<MessageBox>>>,
+    adapter: MessageAdapter,
 }
 
 impl MessageSender {
-    pub(crate) fn new(messages: Arc<Mutex<Vec<MessageBox>>>) -> Self {
-        MessageSender { messages }
+    pub(crate) fn new(adapter: MessageAdapter) -> Self {
+        MessageSender { adapter }
     }
 
     pub fn send<M: Any + Send>(&self, message: M, target: Entity) {
-        self.messages
-            .lock()
-            .expect("MessageSender::send: Cannot lock message queue.")
-            .push(MessageBox::new(message, target));
+        self.adapter.push_message(target, message);
     }
 }

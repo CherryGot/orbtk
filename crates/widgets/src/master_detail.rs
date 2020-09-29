@@ -46,6 +46,7 @@ impl MasterDetailState {
 
     // expands the widget (two column layout)
     fn expand(&mut self, ctx: &mut Context) {
+        println!("Do expand");
         self.expanded = true;
         if let Some(master) = self.master {
             ctx.get_widget(master)
@@ -68,6 +69,7 @@ impl MasterDetailState {
 
     // collapse the widget (one column layout)
     fn collapse(&mut self, ctx: &mut Context) {
+        println!("do collapse");
         self.expanded = false;
 
         if let Some(master) = self.master {
@@ -112,7 +114,7 @@ impl MasterDetailState {
 }
 
 impl State for MasterDetailState {
-    fn init(&mut self, registry: &mut Registry, ctx: &mut Context) {
+    fn init(&mut self, _: &mut Registry, ctx: &mut Context) {
         self.update = true;
         self.content_grid = ctx.child(CONTENT_GRID).entity();
         self.event_adapter = ctx.event_adapter();
@@ -123,6 +125,8 @@ impl State for MasterDetailState {
         if !self.update {
             return;
         }
+
+        println!("update");
 
         self.update = false;
         let responsive = *MasterDetail::responsive_ref(&ctx.widget());
@@ -157,17 +161,18 @@ impl State for MasterDetailState {
         let break_point: f64 = *MasterDetail::break_point_ref(&ctx.widget());
 
         if self.expanded && width <= break_point {
+            self.expanded = true;
             // sent action to next iteration
             ctx.message_sender()
                 .send(MasterDetailAction::Collapse, ctx.entity());
             MasterDetail::navigation_visibility_set(&mut ctx.widget(), Visibility::Visible);
-        // todo handle next iteration
+            println!("expand");
         } else if !self.expanded && width > break_point {
-            // sent action to next iteration
+            self.expanded = false; // sent action to next iteration
             ctx.message_sender()
                 .send(MasterDetailAction::Expand, ctx.entity());
             MasterDetail::navigation_visibility_set(&mut ctx.widget(), Visibility::Hidden);
-            // todo handle next iteration
+            println!("collapse");
         }
     }
 }
