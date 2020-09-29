@@ -16,41 +16,7 @@ enum PagerAction {
 #[derive(Default, Clone, Debug, AsAny)]
 pub struct PagerState {
     current_index: usize,
-    actions: VecDeque<PagerAction>,
 }
-
-impl PagerState {
-    // used internal to navigate to the current index.
-    fn navigate_to_current_index(&mut self) {
-        self.actions.push_front(PagerAction::NavigateToCurrent);
-    }
-
-    /// Navigates to the next child. If the current child is the last in the list nothing will happen.
-    pub fn next(&mut self) {
-        self.actions.push_front(PagerAction::Next);
-    }
-
-    /// Navigates to the previous child. If the current child is the first in the list nothing will happen.
-    pub fn previous(&mut self) {
-        self.actions.push_front(PagerAction::Previous);
-    }
-
-    /// Navigates to the given index. Is the index out of bounds nothing will happen.
-    pub fn navigate(&mut self, index: usize) {
-        self.actions.push_front(PagerAction::Navigate(index));
-    }
-
-    /// Removes the child on the given index. If the index is out of bounds nothing will happen.
-    pub fn remove(&mut self, index: usize) {
-        self.actions.push_front(PagerAction::Remove(index));
-    }
-
-    /// Pushes the given entity on the end of the pagers children.
-    pub fn push(&mut self, entity: Entity) {
-        self.actions.push_front(PagerAction::Push(entity));
-    }
-}
-
 impl State for PagerState {
     fn init(&mut self, _registry: &mut Registry, ctx: &mut Context) {
         let current_index = Pager::correct_current_index(ctx);
@@ -77,7 +43,7 @@ impl State for PagerState {
     }
 
     fn update(&mut self, _registry: &mut Registry, ctx: &mut Context) {
-        if let Some(action) = self.actions.pop_front() {
+        for action in ctx.messages::<PagerAction>() {
             match action {
                 PagerAction::Next => Pager::next(ctx, ctx.entity()),
                 PagerAction::Previous => Pager::previous(ctx, ctx.entity()),
@@ -110,8 +76,8 @@ widget!(
     /// let next_button = Button::new()
     ///     .enabled(("next_enabled", pager))
     ///     .text("next")
-    ///     .on_click(move |states, _| {
-    ///         states.get_mut::<PagerState>(pager).next();
+    ///     .on_click(move |sender, _| {
+    ///         sender.send(PagerAction::Next, pager);
     ///         true
     ///     })
     ///     .build(ctx);
@@ -120,7 +86,7 @@ widget!(
     ///     .enabled(("previous_enabled", pager))
     ///     .text("previous")
     ///     .on_click(move |states, _| {
-    ///         states.get_mut::<PagerState>(pager).previous();
+    ///         sender.send(PagerAction::Previous, pager);
     ///         true
     ///     })
     ///     .build(ctx);
@@ -263,10 +229,9 @@ impl Pager {
 }
 
 impl Template for Pager {
-    fn template(self, _id: Entity, _context: &mut BuildContext) -> Self {
-        self.name("Pager")
-            .on_changed("current_index", |states, id| {
-                states.get_mut::<PagerState>(id).navigate_to_current_index();
-            })
+    fn template(self, id: Entity, _context: &mut BuildContext) -> Self {
+        self.name("Pager").on_changed("current_index", |sender, _| {
+            sender.send(PagerAction::NavigateToCurrent, id);
+        })
     }
 }

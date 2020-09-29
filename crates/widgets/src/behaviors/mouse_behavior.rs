@@ -30,7 +30,7 @@ impl State for MouseBehaviorState {
             return;
         }
 
-        if let Some(action) = self.action {
+        for action in ctx.messages::<Action>() {
             match action {
                 Action::Press(_) => {
                     ctx.get_widget(self.target).set("pressed", true);
@@ -38,7 +38,6 @@ impl State for MouseBehaviorState {
                 }
                 Action::Release(p) => {
                     if !*MouseBehavior::pressed_ref(&ctx.widget()) {
-                        self.action = None;
                         return;
                     }
 
@@ -58,12 +57,10 @@ impl State for MouseBehaviorState {
                     MouseBehavior::position_set(&mut ctx.widget(), p);
                     self.has_delta = true;
                 }
-            };
-
-            ctx.get_widget(self.target).update(false);
-
-            self.action = None;
+            }
         }
+
+        ctx.get_widget(self.target).update(false);
     }
 
     fn update_post_layout(&mut self, _: &mut Registry, ctx: &mut Context) {
@@ -95,21 +92,15 @@ impl Template for MouseBehavior {
         self.name("MouseBehavior")
             .delta(0.0)
             .pressed(false)
-            .on_mouse_down(move |states, m| {
-                states
-                    .get_mut::<MouseBehaviorState>(id)
-                    .action(Action::Press(m));
+            .on_mouse_down(move |sender, m| {
+                sender.send(Action::Press(m), id);
                 false
             })
-            .on_mouse_up(move |states, m| {
-                states
-                    .get_mut::<MouseBehaviorState>(id)
-                    .action(Action::Release(m));
+            .on_mouse_up(move |sender, m| {
+                sender.send(Action::Release(m), id);
             })
-            .on_scroll(move |states, p| {
-                states
-                    .get_mut::<MouseBehaviorState>(id)
-                    .action(Action::Scroll(p));
+            .on_scroll(move |sender, p| {
+                sender.send(Action::Scroll(p), id);
                 false
             })
     }

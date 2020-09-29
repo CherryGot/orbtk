@@ -194,7 +194,6 @@ impl Template for ComboBoxItem {
 #[derive(Default, AsAny)]
 pub struct ComboBoxState {
     popup: Entity,
-    action: Option<Action>,
     builder: Option<Arc<RefCell<dyn Fn(&mut BuildContext, usize) -> Entity + 'static>>>,
     count: usize,
     items_panel: Entity,
@@ -202,10 +201,6 @@ pub struct ComboBoxState {
 }
 
 impl ComboBoxState {
-    fn action(&mut self, action: impl Into<Option<Action>>) {
-        self.action = action.into();
-    }
-
     // closes the popup on mouse up outside of the combobox and popup.
     fn close_popup(&mut self, ctx: &mut Context, p: Point) {
         let combo_box_position = ctx.widget().clone::<Point>("position");

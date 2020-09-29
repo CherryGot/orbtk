@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, rc::Rc};
+use std::rc::Rc;
 
 use crate::{api::prelude::*, proc_macros::*, shell::prelude::WindowRequest, theme::prelude::*};
 
@@ -10,7 +10,7 @@ pub static STYLE_WINDOW: &str = "window";
 type DirtyWidgets = Vec<Entity>;
 
 #[derive(Clone)]
-enum Action {
+pub enum WindowAction {
     WindowEvent(WindowEvent),
     FocusEvent(FocusEvent),
 }
@@ -18,16 +18,11 @@ enum Action {
 // The `WindowState` handles the window events.
 #[derive(Default, AsAny)]
 struct WindowState {
-    actions: VecDeque<Action>,
     background: Brush,
     title: String,
 }
 
 impl WindowState {
-    fn push_action(&mut self, action: Action) {
-        self.actions.push_front(action);
-    }
-
     fn resize(&self, width: f64, height: f64, ctx: &mut Context) {
         Window::bounds_mut(&mut ctx.window()).set_size(width, height);
         Window::constraint_mut(&mut ctx.window()).set_size(width, height);
@@ -76,9 +71,9 @@ impl State for WindowState {
     }
 
     fn update(&mut self, _: &mut Registry, ctx: &mut Context) {
-        for message in ctx.messages::<Action>() {
+        for message in ctx.messages::<WindowAction>() {
             match message {
-                Action::WindowEvent(window_event) => match window_event {
+                WindowAction::WindowEvent(window_event) => match window_event {
                     WindowEvent::Resize { width, height } => {
                         self.resize(width, height, ctx);
                     }
@@ -87,7 +82,7 @@ impl State for WindowState {
                     }
                     _ => {}
                 },
-                Action::FocusEvent(focus_event) => match focus_event {
+                WindowAction::FocusEvent(focus_event) => match focus_event {
                     FocusEvent::RequestFocus(entity) => {
                         self.request_focus(entity, ctx);
                     }
@@ -110,7 +105,7 @@ impl State for WindowState {
 
         // if let Some(action) = self.actions.pop_front() {
         //     match action {
-        //         Action::WindowEvent(window_event) => match window_event {
+        //         WindowAction::WindowEvent(window_event) => match window_event {
         //             WindowEvent::Resize { width, height } => {
         //                 self.resize(width, height, ctx);
         //             }
@@ -119,7 +114,7 @@ impl State for WindowState {
         //             }
         //             _ => {}
         //         },
-        //         Action::FocusEvent(focus_event) => match focus_event {
+        //         WindowAction::FocusEvent(focus_event) => match focus_event {
         //             FocusEvent::RequestFocus(entity) => {
         //                 self.request_focus(entity, ctx);
         //             }
@@ -200,7 +195,7 @@ impl Template for Window {
             .resizeable(false)
             .always_on_top(false)
             .on_window_event(move |sender, event| {
-                sender.send(Action::WindowEvent(event), id);
+                sender.send(WindowAction::WindowEvent(event), id);
                 true
             })
     }

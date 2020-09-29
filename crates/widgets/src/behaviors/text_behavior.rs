@@ -1,11 +1,10 @@
-use std::collections::VecDeque;
-
 use crate::{
     api::prelude::*,
     proc_macros::*,
     render::TextMetrics,
     shell::prelude::{Key, KeyEvent},
     theme::fonts,
+    window::WindowAction,
     Cursor, TextBlock,
 };
 
@@ -46,7 +45,6 @@ impl Default for Direction {
 /// The `TextBehaviorState` handles the text processing of the `TextBehavior` widget.
 #[derive(Default, AsAny)]
 pub struct TextBehaviorState {
-    action: VecDeque<TextAction>,
     cursor: Entity,
     target: Entity,
     text_block: Entity,
@@ -54,19 +52,16 @@ pub struct TextBehaviorState {
     pressed: bool,
     self_update: bool,
     update_selection: bool,
-    event_adapter: EventAdapter,
     window: Entity, //mouse_up_count: usize,
+    event_adapter: EventAdapter,
 }
 
 impl TextBehaviorState {
-    /// Sets an action the the state.
-    pub fn action(&mut self, action: TextAction) {
-        self.action.push_back(action);
-    }
-
-    fn request_focus(&self) {
-        self.event_adapter
-            .push_event_direct(self.window, FocusEvent::RequestFocus(self.target));
+    fn request_focus(&self, ctx: &Context) {
+        ctx.message_sender().send(
+            WindowAction::FocusEvent(FocusEvent::RequestFocus(self.target)),
+            ctx.window().entity(),
+        );
     }
 
     // -- Text operations --
@@ -305,8 +300,10 @@ impl TextBehaviorState {
 
     fn activate(&self, ctx: &mut Context) {
         if *ctx.widget().get::<bool>("lost_focus_on_activation") {
-            self.event_adapter
-                .push_event_direct(self.window, FocusEvent::RemoveFocus(self.target));
+            ctx.message_sender().send(
+                WindowAction::FocusEvent(FocusEvent::RemoveFocus(self.target)),
+                ctx.window().entity(),
+            );
         }
 
         self.event_adapter
@@ -385,7 +382,7 @@ impl TextBehaviorState {
     fn mouse_down(&mut self, ctx: &mut Context, mouse: Mouse) {
         self.pressed = true;
         if !*TextBehavior::focused_ref(&ctx.widget()) {
-            self.request_focus();
+            self.request_focus(ctx);
             return;
         }
 
@@ -418,7 +415,8 @@ impl TextBehaviorState {
         selection.set_start(new_start);
 
         if selection.start() > 0 || selection.start() < self.len(ctx) {
-            self.action(TextAction::MouseMove(position));
+            ctx.message_sender()
+                .send(TextAction::MouseMove(position), ctx.entity());
             ctx.widget().set("dirty", true);
         }
 
@@ -683,7 +681,7 @@ impl State for TextBehaviorState {
     }
 
     fn update(&mut self, registry: &mut Registry, ctx: &mut Context) {
-        if let Some(action) = self.action.pop_front() {
+        for action in ctx.messages::<TextAction>() {
             match action {
                 TextAction::KeyDown(event) => self.key_down(registry, ctx, event),
                 TextAction::MouseDown(p) => self.mouse_down(ctx, p),
@@ -833,50 +831,34 @@ impl Template for TextBehavior {
             .focused(false)
             .lost_focus_on_activation(true)
             .select_all_on_focus(false)
-            .on_key_down(move |states, event| -> bool {
-                states
-                    .get_mut::<TextBehaviorState>(id)
-                    .action(TextAction::KeyDown(event));
+            .on_key_down(move |sender, event| -> bool {
+                sender.send(TextAction::KeyDown(event), id);
                 false
             })
-            .on_drop_file(move |states, file_name, position| {
-                states
-                    .get_mut::<TextBehaviorState>(id)
-                    .action(TextAction::Drop(file_name, position));
+            .on_drop_file(move |sender, file_name, position| {
+                sender.send(TextAction::Drop(file_name, position), id);
                 false
             })
-            .on_drop_text(move |states, file_name, position| {
-                states
-                    .get_mut::<TextBehaviorState>(id)
-                    .action(TextAction::Drop(file_name, position));
+            .on_drop_text(move |sender, file_name, position| {
+                sender.send(TextAction::Drop(file_name, position), id);
                 false
             })
-            .on_mouse_down(move |states, m| {
-                states
-                    .get_mut::<TextBehaviorState>(id)
-                    .action(TextAction::MouseDown(m));
+            .on_mouse_down(move |sender, m| {
+                sender.send(TextAction::MouseDown(m), id);
                 true
             })
-            .on_mouse_up(move |states, _| {
-                states
-                    .get_mut::<TextBehaviorState>(id)
-                    .action(TextAction::MouseUp);
+            .on_mouse_up(move |sender, _| {
+                sender.send(TextAction::MouseUp, id);
             })
-            .on_mouse_move(move |states, p| {
-                states
-                    .get_mut::<TextBehaviorState>(id)
-                    .action(TextAction::MouseMove(p));
+            .on_mouse_move(move |sender, p| {
+                sender.send(TextAction::MouseMove(p), id);
                 true
             })
-            .on_changed("focused", move |states, _| {
-                states
-                    .get_mut::<TextBehaviorState>(id)
-                    .action(TextAction::FocusedChanged);
+            .on_changed("focused", move |sender, _| {
+                sender.send(TextAction::FocusedChanged, id);
             })
-            .on_changed("selection", move |states, _| {
-                states
-                    .get_mut::<TextBehaviorState>(id)
-                    .action(TextAction::SelectionChanged);
+            .on_changed("selection", move |sender, _| {
+                sender.send(TextAction::SelectionChanged, id);
             })
     }
 }

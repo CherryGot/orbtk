@@ -123,10 +123,8 @@ impl Template for TextBox {
                     )
                     .build(ctx),
             )
-            .on_changed("text", move |states, _| {
-                states
-                    .get_mut::<TextBehaviorState>(text_behavior)
-                    .action(TextAction::ForceUpdate);
+            .on_changed("text", move |sender, _| {
+                sender.send(TextAction::ForceUpdate, text_behavior);
             })
     }
 }
