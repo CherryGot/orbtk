@@ -76,19 +76,8 @@ impl State for WindowState {
     }
 
     fn update(&mut self, _: &mut Registry, ctx: &mut Context) {
-        if self.background != *Window::background_ref(&ctx.widget()) {
-            self.set_background(ctx);
-        }
-
-        let window = ctx.widget();
-
-        if !self.title.eq(Window::title_ref(&window)) {
-            self.title = Window::title_clone(&window);
-            ctx.send_window_request(WindowRequest::ChangeTitle(self.title.clone()));
-        }
-
-        if let Some(action) = self.actions.pop_front() {
-            match action {
+        for message in ctx.messages::<Action>() {
+            match message {
                 Action::WindowEvent(window_event) => match window_event {
                     WindowEvent::Resize { width, height } => {
                         self.resize(width, height, ctx);
@@ -108,6 +97,38 @@ impl State for WindowState {
                 },
             }
         }
+        // if self.background != *Window::background_ref(&ctx.widget()) {
+        //     self.set_background(ctx);
+        // }
+
+        // let window = ctx.widget();
+
+        // if !self.title.eq(Window::title_ref(&window)) {
+        //     self.title = Window::title_clone(&window);
+        //     ctx.send_window_request(WindowRequest::ChangeTitle(self.title.clone()));
+        // }
+
+        // if let Some(action) = self.actions.pop_front() {
+        //     match action {
+        //         Action::WindowEvent(window_event) => match window_event {
+        //             WindowEvent::Resize { width, height } => {
+        //                 self.resize(width, height, ctx);
+        //             }
+        //             WindowEvent::ActiveChanged(active) => {
+        //                 self.active_changed(active, ctx);
+        //             }
+        //             _ => {}
+        //         },
+        //         Action::FocusEvent(focus_event) => match focus_event {
+        //             FocusEvent::RequestFocus(entity) => {
+        //                 self.request_focus(entity, ctx);
+        //             }
+        //             FocusEvent::RemoveFocus(entity) => {
+        //                 self.remove_focus(entity, ctx);
+        //             }
+        //         },
+        //     }
+        // }
     }
 }
 
@@ -178,14 +199,8 @@ impl Template for Window {
             .title("Window")
             .resizeable(false)
             .always_on_top(false)
-            .on_window_event(move |ctx, event| {
-                ctx.get_mut::<WindowState>(id)
-                    .push_action(Action::WindowEvent(event));
-                true
-            })
-            .on_focus_event(move |ctx, event| {
-                ctx.get_mut::<WindowState>(id)
-                    .push_action(Action::FocusEvent(event));
+            .on_window_event(move |sender, event| {
+                sender.send(Action::WindowEvent(event), id);
                 true
             })
     }
@@ -198,3 +213,5 @@ impl Template for Window {
         GridLayout::new().into()
     }
 }
+
+// todo sent message to remove or request focus
